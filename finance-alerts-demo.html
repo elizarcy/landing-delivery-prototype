@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <meta name="robots" content="noindex,nofollow">
+  <title>落地配后台—财务中心与订单预警原型</title>
+  <style>
+    :root{
+      --blue:#2f6fed;--blue2:#1e5bd6;--blue-soft:#edf4ff;--nav:#172033;
+      --nav-hover:#202c43;--page:#f5f7fb;--card:#fff;--line:#e8ecf2;
+      --text:#202633;--muted:#7b8494;--green:#16a36f;--amber:#e99b13;
+      --red:#e24b58;--purple:#7a5ce5;--cyan:#0fa5b8;--shadow:0 4px 18px rgba(31,45,78,.06);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-width:1180px;min-height:100%;background:var(--page);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;font-size:14px}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}
+    .topbar{position:fixed;z-index:50;top:0;left:0;right:0;height:62px;display:flex;align-items:center;
+      padding:0 22px;background:#fff;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;width:268px;font-size:17px;font-weight:700}
+    .brand-mark{display:grid;place-items:center;width:34px;height:34px;margin-right:10px;color:#fff;background:var(--blue);
+      border-radius:9px;font-weight:800;box-shadow:0 4px 10px rgba(47,111,237,.25)}
+    .brand em{margin-left:8px;padding:2px 7px;color:var(--blue);background:var(--blue-soft);border-radius:4px;font-size:10px;font-style:normal}
+    .workspace-switch{position:absolute;left:50%;display:flex;padding:3px;background:#f2f4f8;border-radius:8px;transform:translateX(-50%)}
+    .workspace-switch button{min-width:104px;padding:7px 14px;color:#697385;background:transparent;border:0;border-radius:6px}
+    .workspace-switch .active{color:#fff;background:var(--blue);box-shadow:0 2px 8px rgba(47,111,237,.2)}
+    .top-actions{display:flex;align-items:center;gap:12px;margin-left:auto}
+    .bell{position:relative;width:36px;height:36px;border:0;background:transparent;color:#758094;font-size:18px}
+    .bell b{position:absolute;top:0;right:-4px;min-width:19px;padding:1px 5px;color:#fff;background:var(--red);border:2px solid #fff;border-radius:12px;font-size:10px}
+    .avatar{display:grid;place-items:center;width:32px;height:32px;color:var(--blue);background:var(--blue-soft);border-radius:50%;font-weight:700}
+    .account{line-height:1.25}.account b{display:block;font-size:13px}.account span{color:#969daa;font-size:10px}
+
+    .sidebar{position:fixed;z-index:40;top:62px;bottom:0;left:0;width:228px;padding:15px 10px 40px;overflow:auto;background:var(--nav);color:#d7dfec}
+    .group-title{padding:9px 13px 6px;color:#75839a;font-size:11px}
+    .nav-item{position:relative;width:100%;display:flex;align-items:center;gap:11px;margin:2px 0;padding:10px 12px;color:#c0cad9;
+      background:transparent;border:0;border-radius:7px;text-align:left;transition:.15s}
+    .nav-item:hover{background:var(--nav-hover);color:#fff}.nav-item.active{color:#fff;background:var(--blue);font-weight:650}
+    .nav-icon{width:21px;text-align:center;font-size:15px}.nav-arrow{margin-left:auto;color:#728198}
+    .badge{margin-left:auto;padding:1px 7px;color:#ffb7bd;background:rgba(226,75,88,.2);border-radius:10px;font-size:11px}
+    .nav-item.active .badge{color:#d92739;background:#fff}
+    .children{padding:2px 0 4px 43px}.children button{position:relative;width:100%;padding:8px 9px;color:#8f9db2;background:transparent;border:0;text-align:left}
+    .children button:before{position:absolute;top:14px;left:-12px;width:4px;height:4px;background:#55647c;border-radius:50%;content:""}
+    .children button.active{color:#79a6ff}.children button.active:before{background:#79a6ff}
+    .nav-separator{height:1px;margin:13px 10px;background:#26324a}
+
+    main{margin-left:228px;padding:86px 24px 38px}
+    .page{display:none}.page.active{display:block}
+    .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+    .crumb{margin-bottom:7px;color:#9098a6;font-size:12px}.page-head h1{margin:0;font-size:23px}.page-head p{margin:7px 0 0;color:var(--muted)}
+    .actions{display:flex;align-items:center;gap:9px}
+    .btn{padding:8px 14px;color:#3c4656;background:#fff;border:1px solid #dfe4eb;border-radius:6px;box-shadow:0 1px 2px rgba(20,30,50,.02)}
+    .btn:hover{border-color:#aebad0}.btn.primary{color:#fff;background:var(--blue);border-color:var(--blue)}.btn.primary:hover{background:var(--blue2)}
+    .btn.small{padding:5px 10px;font-size:12px}.btn.link{padding:4px;color:var(--blue);background:transparent;border:0;box-shadow:none}
+    .btn.danger-link{color:var(--red)}.btn:disabled{cursor:not-allowed;opacity:.45}
+    .select,.input,.date-input{height:34px;padding:0 10px;color:#465061;background:#fff;border:1px solid #dfe4eb;border-radius:6px;outline:none}
+    .input:focus,.select:focus,.date-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,111,237,.09)}
+
+    .tabs{display:flex;gap:5px;margin-bottom:16px;padding:4px;background:#e9edf3;border-radius:8px;width:max-content}
+    .tabs button{padding:7px 18px;color:#667184;background:transparent;border:0;border-radius:6px}
+    .tabs button.active{color:var(--blue);background:#fff;font-weight:650;box-shadow:0 1px 5px rgba(30,45,70,.08)}
+    .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:15px}
+    .metric{position:relative;min-height:118px;padding:19px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+    .metric:after{position:absolute;right:-18px;bottom:-27px;width:85px;height:85px;background:var(--accent,#dce8ff);border-radius:50%;opacity:.5;content:""}
+    .metric-top{display:flex;align-items:center;justify-content:space-between;color:#687387}
+    .metric-icon{display:grid;place-items:center;width:34px;height:34px;color:var(--icon,#2f6fed);background:var(--soft,#edf4ff);border-radius:9px;font-size:16px}
+    .metric strong{display:block;margin-top:14px;font-size:25px;letter-spacing:-.5px}.metric small{margin-left:6px;color:#929aa6;font-size:12px;font-weight:400}
+    .metric .delta{margin-top:8px;color:#8a93a1;font-size:11px}.metric .delta b{margin-left:5px;color:var(--green)}
+    .finance-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(350px,.85fr);gap:15px;margin-bottom:15px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;padding:17px 19px;border-bottom:1px solid #f0f2f5}
+    .card-title{display:flex;align-items:center;gap:9px}.card-title h2{margin:0;font-size:16px}.card-title span{color:#9098a5;font-size:12px}
+    .legend{display:flex;align-items:center;gap:17px;color:#717b8c;font-size:12px}.dot{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:2px}
+    .chart-wrap{height:310px;padding:18px 18px 16px}.chart{display:flex;height:100%}.y-axis{width:49px;display:flex;flex-direction:column;justify-content:space-between;padding-bottom:25px;color:#9aa2af;font-size:11px;text-align:right}
+    .plot{position:relative;flex:1;margin-left:11px;border-left:1px solid #edf0f5;border-bottom:1px solid #dfe4eb}
+    .grid-line{position:absolute;left:0;right:0;height:1px;background:#edf0f5}.grid-line:nth-child(1){top:0}.grid-line:nth-child(2){top:33.3%}.grid-line:nth-child(3){top:66.6%}
+    .bars{position:absolute;inset:9px 10px 0;display:flex;align-items:flex-end;justify-content:space-around}
+    .bar-group{position:relative;width:8%;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:4px}
+    .bar{width:12px;min-height:3px;border-radius:3px 3px 0 0;transition:height .25s}.bar.income{background:linear-gradient(#6c9dff,#2f6fed)}.bar.cost{background:linear-gradient(#ffb168,#f08a34)}
+    .bar-group label{position:absolute;bottom:-23px;left:50%;white-space:nowrap;color:#8a93a1;font-size:10px;transform:translateX(-50%)}
+    .composition{padding:21px 21px 19px}.donut-row{display:flex;align-items:center;justify-content:center;gap:31px;margin-bottom:23px}
+    .donut{position:relative;width:145px;height:145px;border-radius:50%;background:conic-gradient(#2f6fed 0 38.4%,#0fa5b8 38.4% 67.1%,#16a36f 67.1% 84.5%,#7a5ce5 84.5% 94%,#e99b13 94% 100%)}
+    .donut:after{position:absolute;inset:28px;display:grid;place-items:center;background:#fff;border-radius:50%;content:""}
+    .donut-center{position:absolute;z-index:2;top:50%;left:50%;text-align:center;transform:translate(-50%,-50%)}.donut-center b{display:block;font-size:18px}.donut-center span{color:#9199a6;font-size:10px}
+    .cost-legend{min-width:145px}.cost-item{display:flex;align-items:center;margin:9px 0}.cost-item i{width:8px;height:8px;margin-right:7px;border-radius:2px}.cost-item span{color:#667184}.cost-item b{margin-left:auto;padding-left:17px;font-size:12px}
+    .cost-total{padding:12px 0 0;border-top:1px solid var(--line);color:#707a8a;text-align:center}.cost-total strong{margin-left:8px;color:#222b38;font-size:18px}
+    .bottom-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:15px}
+    .rank-list{padding:9px 18px 16px}.rank{display:grid;grid-template-columns:28px 86px 1fr 90px;align-items:center;gap:8px;padding:9px 0}
+    .rank-num{display:grid;place-items:center;width:21px;height:21px;color:#667184;background:#eff2f6;border-radius:5px;font-size:11px}
+    .rank:nth-child(-n+3) .rank-num{color:#fff;background:var(--blue)}.progress{height:7px;background:#edf1f5;border-radius:5px;overflow:hidden}.progress i{display:block;height:100%;background:linear-gradient(90deg,#74a2ff,var(--blue));border-radius:5px}
+    .rank b{text-align:right;font-size:12px}
+    .rule-card{padding:19px}.rule-title{display:flex;align-items:center;gap:9px;margin-bottom:13px;font-weight:700}.rule-icon{display:grid;place-items:center;width:30px;height:30px;color:#fff;background:var(--amber);border-radius:8px}
+    .rule-expression{padding:15px;color:#8f5d08;background:#fff8e8;border:1px solid #f9e4b2;border-radius:8px;text-align:center;font-size:16px;font-weight:700}
+    .rule-list{margin:14px 0 0;padding:0;list-style:none;color:#6f7887;line-height:2}.rule-list b{color:#333c49}
+
+    .filter-card{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:15px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow)}
+    .filter-card .input{width:240px}.filter-card .spacer{flex:1}.filter-label{color:#6f7887}
+    .table-card{overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow)}
+    table{width:100%;border-collapse:collapse}th{padding:12px 13px;color:#717b8b;background:#f8f9fb;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;text-align:left;white-space:nowrap}
+    td{padding:13px;border-bottom:1px solid #eef1f5;color:#424b59;white-space:nowrap}tbody tr:hover{background:#fafcff}tbody tr:last-child td{border-bottom:0}
+    td.money{text-align:right;font-variant-numeric:tabular-nums}.income-text{color:var(--green);font-weight:650}.cost-text{color:#e47721;font-weight:650}.profit-pos{color:var(--green)}.profit-neg{color:var(--red);font-weight:700}
+    .tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:10px;font-size:11px}.tag.green{color:#087952;background:#e7f7f0}.tag.amber{color:#a76605;background:#fff3d9}.tag.red{color:#c53543;background:#ffe9eb}.tag.gray{color:#657083;background:#eef1f5}.tag.blue{color:#245fc7;background:#eaf2ff}
+    .pagination{display:flex;align-items:center;justify-content:flex-end;gap:7px;padding:13px 15px;color:#7e8796}.pagination button{min-width:29px;height:29px;color:#667184;background:#fff;border:1px solid #dfe4eb;border-radius:5px}.pagination button.active{color:#fff;background:var(--blue);border-color:var(--blue)}
+
+    .alert-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+    .alert-card{position:relative;padding:17px 18px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);cursor:pointer;overflow:hidden}
+    .alert-card.active{border-color:var(--color);box-shadow:0 0 0 2px color-mix(in srgb,var(--color) 14%,transparent)}
+    .alert-card:before{position:absolute;top:0;left:0;width:4px;height:100%;background:var(--color);content:""}
+    .alert-card .alert-top{display:flex;align-items:center;justify-content:space-between;color:#697487}.alert-card .bubble{display:grid;place-items:center;width:31px;height:31px;color:var(--color);background:var(--soft);border-radius:8px}
+    .alert-card strong{display:block;margin-top:13px;font-size:25px}.alert-card small{margin-left:5px;color:#999faa;font-size:11px;font-weight:400}
+    .alert-rule-banner{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:13px 16px;color:#75510e;background:#fff9e9;border:1px solid #f4dea6;border-radius:8px}
+    .alert-rule-banner strong{color:#ad6d00}.alert-rule-banner .spacer{flex:1}.alert-rule-banner button{color:#8a5b07;background:transparent;border:0}
+    .ratio{font-weight:700}.ratio.high{color:#e07e19}.ratio.loss{color:var(--red)}.ratio.zero{color:var(--purple)}
+    .status-dot{display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%}.status-dot.pending{background:var(--amber)}.status-dot.done{background:var(--green)}
+
+    .placeholder{display:grid;place-items:center;min-height:520px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);text-align:center}
+    .placeholder-icon{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 14px;color:var(--blue);background:var(--blue-soft);border-radius:18px;font-size:25px;font-weight:800}
+    .placeholder h2{margin:0 0 9px}.placeholder p{margin:0;color:#8992a0}
+
+    .mask{position:fixed;z-index:80;inset:0;background:rgba(21,29,44,.34);opacity:0;visibility:hidden;transition:.18s}.mask.show{opacity:1;visibility:visible}
+    .drawer{position:fixed;z-index:90;top:0;right:-620px;width:620px;height:100vh;background:#fff;box-shadow:-12px 0 32px rgba(25,35,55,.16);transition:right .22s ease}
+    .drawer.show{right:0}.drawer-head{display:flex;align-items:center;justify-content:space-between;height:62px;padding:0 21px;border-bottom:1px solid var(--line)}
+    .drawer-head h2{margin:0;font-size:17px}.close{width:32px;height:32px;color:#7b8493;background:#f3f5f8;border:0;border-radius:6px;font-size:21px}
+    .drawer-body{height:calc(100vh - 126px);padding:19px 21px;overflow:auto}.drawer-foot{display:flex;justify-content:flex-end;gap:9px;height:64px;padding:14px 21px;border-top:1px solid var(--line)}
+    .order-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:15px;background:#f7f9fc;border-radius:8px}.kv span{display:block;margin-bottom:5px;color:#8992a0;font-size:11px}.kv b{font-size:13px}
+    .section-title{display:flex;align-items:center;justify-content:space-between;margin:21px 0 10px;font-size:14px;font-weight:700}.section-title:before{width:3px;height:15px;margin-right:8px;background:var(--blue);border-radius:2px;content:""}.section-title span{margin-right:auto}
+    .fee-list{border:1px solid var(--line);border-radius:8px;overflow:hidden}.fee-row{display:grid;grid-template-columns:1fr 115px 120px;align-items:center;padding:11px 13px;border-bottom:1px solid #eef1f5}.fee-row:last-child{border-bottom:0}
+    .fee-row span{color:#697486}.fee-row b{text-align:right}.fee-row input{width:100px;height:30px;padding:0 8px;text-align:right;border:1px solid #dfe4eb;border-radius:5px}
+    .fee-total{margin-top:12px;padding:14px;color:#475160;background:#f7f9fc;border-radius:8px}.fee-total div{display:flex;justify-content:space-between;margin:8px 0}.fee-total .important{padding-top:10px;border-top:1px solid var(--line);font-size:15px}.fee-total .important b{color:var(--red)}
+    .timeline{padding-left:8px}.timeline-item{position:relative;padding:0 0 18px 22px;color:#667184}.timeline-item:before{position:absolute;top:4px;left:0;width:8px;height:8px;background:var(--blue);border:3px solid #dfe9ff;border-radius:50%;content:""}.timeline-item:after{position:absolute;top:15px;bottom:0;left:6px;width:1px;background:#dfe5ee;content:""}.timeline-item:last-child:after{display:none}.timeline-item b{display:block;margin-bottom:4px;color:#343d49}.timeline-item small{color:#9aa1ad}
+    .modal{position:fixed;z-index:100;top:50%;left:50%;width:480px;background:#fff;border-radius:10px;box-shadow:0 22px 60px rgba(20,29,44,.2);opacity:0;visibility:hidden;transform:translate(-50%,-48%);transition:.18s}
+    .modal.show{opacity:1;visibility:visible;transform:translate(-50%,-50%)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:17px 19px;border-bottom:1px solid var(--line)}.modal-head h2{margin:0;font-size:17px}
+    .modal-body{padding:20px}.field{margin-bottom:15px}.field label{display:block;margin-bottom:7px;color:#596375}.field textarea{width:100%;height:105px;padding:10px;border:1px solid #dfe4eb;border-radius:7px;resize:none;outline:none}.field textarea:focus{border-color:var(--blue)}
+    .notice{padding:11px 13px;color:#75601e;background:#fff9e7;border:1px solid #f4e4b2;border-radius:7px;font-size:12px;line-height:1.7}.modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:14px 19px;border-top:1px solid var(--line)}
+    .toast{position:fixed;z-index:120;top:78px;left:50%;padding:10px 17px;color:#fff;background:#263247;border-radius:7px;box-shadow:0 8px 24px rgba(20,30,48,.2);opacity:0;pointer-events:none;transform:translate(-50%,-8px);transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>\n  <div style="position:fixed;right:18px;bottom:18px;z-index:9999;background:#182235;color:#fff;padding:8px 12px;border-radius:7px;font:12px/1.4 sans-serif;box-shadow:0 6px 20px #0003">公开演示版 · 所有订单与金额均为虚拟数据</div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">配</span>落地配物流管理系统 <em>V2.0</em></div>
+    <div class="workspace-switch"><button class="active">客服后台</button><button onclick="toast('已切换至自提工作台演示')">自提工作台</button></div>
+    <div class="top-actions"><button class="bell" aria-label="预警通知">♢<b id="topAlertCount">4</b></button><span class="avatar">客</span><span class="account"><b>客服管理员</b><span>总部运营中心</span></span><span>⌄</span></div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="group-title">业务管理</div>
+    <button class="nav-item" data-page="placeholder" data-title="工作台"><span class="nav-icon">⌂</span>工作台</button>
+    <button class="nav-item" data-page="placeholder" data-title="订单管理"><span class="nav-icon">▣</span>订单管理</button>
+    <button class="nav-item" data-page="placeholder" data-title="异常管理"><span class="nav-icon">!</span>异常管理<span class="badge">87</span></button>
+    <button class="nav-item" data-page="placeholder" data-title="干线管理"><span class="nav-icon">⇢</span>干线管理</button>
+    <button class="nav-item" data-page="placeholder" data-title="支线管理"><span class="nav-icon">⌁</span>支线管理</button>
+    <div class="nav-separator"></div>
+    <div class="group-title">资源与自提</div>
+    <button class="nav-item" data-page="placeholder" data-title="司机管理"><span class="nav-icon">♙</span>司机管理</button>
+    <button class="nav-item" data-page="placeholder" data-title="自提点管理"><span class="nav-icon">⌂</span>自提点管理</button>
+    <button class="nav-item" data-page="placeholder" data-title="自提订单"><span class="nav-icon">▤</span>自提订单</button>
+    <div class="nav-separator"></div>
+    <div class="group-title">经营管理</div>
+    <button class="nav-item active" id="financeNav"><span class="nav-icon">¥</span>财务中心<span class="nav-arrow">⌄</span></button>
+    <div class="children" id="financeChildren">
+      <button class="active" data-page="finance-overview">财务概览</button>
+      <button data-page="finance-detail">财务明细</button>
+    </div>
+    <button class="nav-item" data-page="alerts"><span class="nav-icon">△</span>订单预警<span class="badge" id="sideAlertCount">4</span></button>
+  </aside>
+
+  <main>
+    <section class="page active" id="finance-overview">
+      <div class="page-head">
+        <div><div class="crumb">落地配 / 财务中心 / 财务概览</div><h1>财务概览</h1><p>按订单实际签收日期统计收入、成本与毛利</p></div>
+        <div class="actions"><input class="date-input" id="datePicker" type="month" value="2026-07"><button class="btn" onclick="exportData()">导出报表</button></div>
+      </div>
+      <div class="tabs"><button class="active" data-mode="daily">按日统计</button><button data-mode="monthly">按月统计</button></div>
+      <div class="summary-grid">
+        <article class="metric" style="--icon:#2f6fed;--soft:#edf4ff;--accent:#dce8ff"><div class="metric-top">签收订单数<span class="metric-icon">✓</span></div><strong id="metricOrders">1,268<small>单</small></strong><div class="delta">较上月同期 <b>↑ 12.6%</b></div></article>
+        <article class="metric" style="--icon:#16a36f;--soft:#e8f7f1;--accent:#daf3e8"><div class="metric-top">总收入<span class="metric-icon">¥</span></div><strong id="metricIncome">¥ 685,000</strong><div class="delta">较上月同期 <b>↑ 8.4%</b></div></article>
+        <article class="metric" style="--icon:#e47721;--soft:#fff1e7;--accent:#ffe3d1"><div class="metric-top">总成本<span class="metric-icon">∑</span></div><strong id="metricCost">¥ 512,340</strong><div class="delta">成本占收入 <b style="color:#e47721">74.79%</b></div></article>
+        <article class="metric" style="--icon:#7a5ce5;--soft:#f0edff;--accent:#e3dcff"><div class="metric-top">毛利<span class="metric-icon">↗</span></div><strong id="metricProfit">¥ 172,660</strong><div class="delta">收入－成本 <b>正向</b></div></article>
+        <article class="metric" style="--icon:#0fa5b8;--soft:#e7f7f9;--accent:#d6f1f4"><div class="metric-top">毛利率<span class="metric-icon">%</span></div><strong id="metricMargin">25.21%</strong><div class="delta">经营健康度 <b>正常</b></div></article>
+      </div>
+      <div class="finance-grid">
+        <article class="card">
+          <div class="card-head"><div class="card-title"><h2>收入与成本趋势</h2><span id="chartSubtitle">2026年7月 · 按签收日</span></div><div class="legend"><span><i class="dot" style="background:#2f6fed"></i>收入</span><span><i class="dot" style="background:#f08a34"></i>成本</span></div></div>
+          <div class="chart-wrap"><div class="chart"><div class="y-axis"><span>4万</span><span>3万</span><span>2万</span><span>1万</span><span>0</span></div><div class="plot"><i class="grid-line"></i><i class="grid-line"></i><i class="grid-line"></i><div class="bars" id="chartBars"></div></div></div></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><div class="card-title"><h2>成本构成</h2><span>五项成本</span></div><button class="btn link" onclick="goPage('finance-detail')">查看明细 ›</button></div>
+          <div class="composition">
+            <div class="donut-row"><div class="donut"><div class="donut-center"><b>51.23万</b><span>总成本</span></div></div>
+              <div class="cost-legend">
+                <div class="cost-item"><i style="background:#2f6fed"></i><span>干线费</span><b>19.65万</b></div>
+                <div class="cost-item"><i style="background:#0fa5b8"></i><span>支线费</span><b>14.68万</b></div>
+                <div class="cost-item"><i style="background:#16a36f"></i><span>末端费</span><b>8.91万</b></div>
+                <div class="cost-item"><i style="background:#7a5ce5"></i><span>调度费</span><b>4.86万</b></div>
+                <div class="cost-item"><i style="background:#e99b13"></i><span>提货费</span><b>3.13万</b></div>
+              </div>
+            </div>
+            <div class="cost-total">成本占总收入<strong>74.79%</strong></div>
+          </div>
+        </article>
+      </div>
+      <div class="bottom-grid">
+        <article class="card"><div class="card-head"><div class="card-title"><h2>收件地区毛利排行</h2><span>本月</span></div></div>
+          <div class="rank-list">
+            <div class="rank"><span class="rank-num">1</span><span>乌鲁木齐</span><span class="progress"><i style="width:92%"></i></span><b>¥ 48,260</b></div>
+            <div class="rank"><span class="rank-num">2</span><span>喀什地区</span><span class="progress"><i style="width:78%"></i></span><b>¥ 39,420</b></div>
+            <div class="rank"><span class="rank-num">3</span><span>伊犁州</span><span class="progress"><i style="width:68%"></i></span><b>¥ 34,680</b></div>
+            <div class="rank"><span class="rank-num">4</span><span>阿克苏</span><span class="progress"><i style="width:52%"></i></span><b>¥ 26,150</b></div>
+            <div class="rank"><span class="rank-num">5</span><span>昌吉州</span><span class="progress"><i style="width:39%"></i></span><b>¥ 19,730</b></div>
+          </div>
+        </article>
+        <article class="card"><div class="card-head"><div class="card-title"><h2>统计口径</h2><span>已确认规则</span></div></div>
+          <div class="rule-card"><div class="rule-title"><span class="rule-icon">i</span>财务数据归属规则</div>
+            <div class="rule-expression">以订单“实际签收时间”归属统计日期</div>
+            <ul class="rule-list"><li>• 派送订单：以收件人签名成功时间为准</li><li>• 自提订单：以取件码核验成功时间为准</li><li>• <b>总成本</b>＝调度费＋干线费＋支线费＋提货费＋末端费</li><li>• 未签收、已取消、已退单订单不计入</li></ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="page" id="finance-detail">
+      <div class="page-head"><div><div class="crumb">落地配 / 财务中心 / 财务明细</div><h1>财务明细</h1><p>逐单查看已签收订单的收入、成本和毛利</p></div><div class="actions"><button class="btn" onclick="exportData()">导出明细</button></div></div>
+      <div class="filter-card"><span class="filter-label">签收日期</span><input class="date-input" type="date" value="2026-07-01"><span>至</span><input class="date-input" type="date" value="2026-07-28"><select class="select"><option>全部来源</option><option>淘集送</option><option>云仓</option><option>外部客户</option></select><select class="select"><option>全部方式</option><option>派送</option><option>自提</option></select><input class="input" id="financeSearch" placeholder="输入订单号搜索"><button class="btn primary" onclick="filterFinance()">查询</button><button class="btn" onclick="resetFinance()">重置</button></div>
+      <div class="table-card"><table><thead><tr><th>签收日期</th><th>订单号</th><th>来源</th><th>方式</th><th>收件地区</th><th>调度费</th><th>干线费</th><th>支线费</th><th>提货费</th><th>末端费</th><th>总成本</th><th>收入</th><th>毛利</th><th>成本占比</th><th>操作</th></tr></thead>
+        <tbody id="financeBody">
+          <tr data-id="DEMO202607280018"><td>2026-07-28</td><td>DEMO202607280018</td><td>淘集送</td><td><span class="tag blue">派送</span></td><td>喀什市</td><td class="money">¥18.00</td><td class="money">¥126.00</td><td class="money">¥86.00</td><td class="money">¥12.00</td><td class="money">¥38.40</td><td class="money cost-text">¥280.40</td><td class="money income-text">¥392.00</td><td class="money profit-pos">¥111.60</td><td><span class="tag green">71.53%</span></td><td><button class="btn link" onclick="openFinanceDrawer('DEMO202607280018')">查看</button></td></tr>
+          <tr data-id="DEMO202607280016"><td>2026-07-28</td><td>DEMO202607280016</td><td>云仓</td><td><span class="tag gray">自提</span></td><td>乌鲁木齐市</td><td class="money">¥0.00</td><td class="money">¥92.00</td><td class="money">¥0.00</td><td class="money">¥8.00</td><td class="money">¥10.00</td><td class="money cost-text">¥110.00</td><td class="money income-text">¥186.00</td><td class="money profit-pos">¥76.00</td><td><span class="tag green">59.14%</span></td><td><button class="btn link" onclick="openFinanceDrawer('DEMO202607280016')">查看</button></td></tr>
+          <tr data-id="DEMO202607280011"><td>2026-07-28</td><td>DEMO202607280011</td><td>淘集送</td><td><span class="tag blue">派送</span></td><td>伊宁市</td><td class="money">¥15.00</td><td class="money">¥118.00</td><td class="money">¥74.00</td><td class="money">¥10.00</td><td class="money">¥35.20</td><td class="money cost-text">¥252.20</td><td class="money income-text">¥348.00</td><td class="money profit-pos">¥95.80</td><td><span class="tag green">72.47%</span></td><td><button class="btn link" onclick="openFinanceDrawer('DEMO202607280011')">查看</button></td></tr>
+          <tr data-id="DEMO202607270086"><td>2026-07-27</td><td>DEMO202607270086</td><td>外部客户</td><td><span class="tag blue">派送</span></td><td>阿克苏市</td><td class="money">¥20.00</td><td class="money">¥132.00</td><td class="money">¥91.00</td><td class="money">¥15.00</td><td class="money">¥42.00</td><td class="money cost-text">¥300.00</td><td class="money income-text">¥426.00</td><td class="money profit-pos">¥126.00</td><td><span class="tag green">70.42%</span></td><td><button class="btn link" onclick="openFinanceDrawer('DEMO202607270086')">查看</button></td></tr>
+          <tr data-id="DEMO202607270073"><td>2026-07-27</td><td>DEMO202607270073</td><td>云仓</td><td><span class="tag gray">自提</span></td><td>昌吉市</td><td class="money">¥0.00</td><td class="money">¥96.00</td><td class="money">¥48.00</td><td class="money">¥6.00</td><td class="money">¥10.00</td><td class="money cost-text">¥160.00</td><td class="money income-text">¥244.00</td><td class="money profit-pos">¥84.00</td><td><span class="tag green">65.57%</span></td><td><button class="btn link" onclick="openFinanceDrawer('DEMO202607270073')">查看</button></td></tr>
+        </tbody></table><div class="pagination"><span>共 1,268 条</span><button>‹</button><button class="active">1</button><button>2</button><button>3</button><button>…</button><button>127</button><button>›</button></div></div>
+    </section>
+
+    <section class="page" id="alerts">
+      <div class="page-head"><div><div class="crumb">落地配 / 订单预警</div><h1>订单预警</h1><p>实时识别成本接近或超过收入的订单，支持提前干预</p></div><div class="actions"><button class="btn" onclick="exportData()">导出预警</button></div></div>
+      <div class="alert-summary">
+        <article class="alert-card active" data-alert="全部预警" style="--color:#2f6fed;--soft:#edf4ff"><div class="alert-top">全部预警<span class="bubble">△</span></div><strong>5<small>单</small></strong></article>
+        <article class="alert-card" data-alert="高风险" style="--color:#e99b13;--soft:#fff5df"><div class="alert-top">成本超过收入90%<span class="bubble">!</span></div><strong>3<small>单</small></strong></article>
+        <article class="alert-card" data-alert="亏损" style="--color:#e24b58;--soft:#ffecef"><div class="alert-top">成本≥收入<span class="bubble">↘</span></div><strong>1<small>单</small></strong></article>
+        <article class="alert-card" data-alert="收入未设置" style="--color:#7a5ce5;--soft:#f0edff"><div class="alert-top">收入未设置<span class="bubble">?</span></div><strong>1<small>单</small></strong></article>
+      </div>
+      <div class="alert-rule-banner"><span>⚠</span><div><strong>预警规则：</strong>总成本 ＞ 收入 × 90% 时触发；成本或收入变化后立即重算。</div><span class="spacer"></span><button onclick="toast('已展示预警规则说明')">查看规则说明 ›</button></div>
+      <div class="filter-card"><select class="select" id="alertLevel"><option>全部预警</option><option>高风险</option><option>亏损</option><option>收入未设置</option></select><select class="select" id="alertStatus"><option>全部状态</option><option>待处理</option><option>已处理</option></select><input class="input" id="alertSearch" placeholder="订单号 / 收件地区"><button class="btn primary" onclick="filterAlerts()">查询</button><button class="btn" onclick="resetAlerts()">重置</button><span class="spacer"></span><span style="color:#8a93a0">当前结果 <b id="alertResultCount" style="color:#333">5</b> 条</span></div>
+      <div class="table-card"><table><thead><tr><th>订单号</th><th>订单状态</th><th>收件地区</th><th>总成本</th><th>收入</th><th>成本占比</th><th>预计毛利</th><th>预警类型</th><th>触发时间</th><th>处理状态</th><th>操作</th></tr></thead>
+        <tbody id="alertBody">
+          <tr data-level="高风险" data-status="待处理" data-id="DEMO202607280018" data-destination="喀什市"><td>DEMO202607280018</td><td>支线运输中</td><td>喀什市</td><td class="money cost-text">¥503.80</td><td class="money income-text">¥530.00</td><td><span class="ratio high">95.06%</span></td><td class="money profit-pos">¥26.20</td><td><span class="tag amber">高风险</span></td><td>07-28 14:26</td><td><span class="status-dot pending"></span>待处理</td><td><button class="btn link" onclick="openDrawer('DEMO202607280018')">详情</button><button class="btn link" onclick="openHandle('DEMO202607280018')">处理</button></td></tr>
+          <tr data-level="亏损" data-status="待处理" data-id="DEMO202607280012" data-destination="伊宁市"><td>DEMO202607280012</td><td>待派送</td><td>伊宁市</td><td class="money cost-text">¥428.60</td><td class="money income-text">¥418.00</td><td><span class="ratio loss">102.54%</span></td><td class="money profit-neg">-¥10.60</td><td><span class="tag red">亏损</span></td><td>07-28 13:42</td><td><span class="status-dot pending"></span>待处理</td><td><button class="btn link" onclick="openDrawer('DEMO202607280012')">详情</button><button class="btn link" onclick="openHandle('DEMO202607280012')">处理</button></td></tr>
+          <tr data-level="收入未设置" data-status="待处理" data-id="DEMO202607270086" data-destination="阿克苏市"><td>DEMO202607270086</td><td>干线运输中</td><td>阿克苏市</td><td class="money cost-text">¥176.00</td><td class="money">¥0.00</td><td><span class="ratio zero">—</span></td><td class="money profit-neg">-¥176.00</td><td><span class="tag gray">收入未设置</span></td><td>07-28 11:18</td><td><span class="status-dot pending"></span>待处理</td><td><button class="btn link" onclick="openDrawer('DEMO202607270086')">详情</button><button class="btn link" onclick="openHandle('DEMO202607270086')">处理</button></td></tr>
+          <tr data-level="高风险" data-status="待处理" data-id="DEMO202607270073" data-destination="昌吉市"><td>DEMO202607270073</td><td>已签收</td><td>昌吉市</td><td class="money cost-text">¥160.00</td><td class="money income-text">¥174.00</td><td><span class="ratio high">91.95%</span></td><td class="money profit-pos">¥14.00</td><td><span class="tag amber">高风险</span></td><td>07-28 10:43</td><td><span class="status-dot pending"></span>待处理</td><td><button class="btn link" onclick="openDrawer('DEMO202607270073')">详情</button><button class="btn link" onclick="openHandle('DEMO202607270073')">处理</button></td></tr>
+          <tr data-level="高风险" data-status="已处理" data-id="DEMO202607260152" data-destination="乌鲁木齐市"><td>DEMO202607260152</td><td>已到自提点</td><td>乌鲁木齐市</td><td class="money cost-text">¥122.00</td><td class="money income-text">¥133.00</td><td><span class="ratio high">91.73%</span></td><td class="money profit-pos">¥11.00</td><td><span class="tag amber">高风险</span></td><td>07-28 09:36</td><td><span class="status-dot done"></span>已处理</td><td><button class="btn link" onclick="openDrawer('DEMO202607260152')">详情</button><button class="btn link" disabled>已处理</button></td></tr>
+        </tbody></table><div class="pagination"><span>共 5 条</span><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></div>
+    </section>
+
+    <section class="page" id="placeholder">
+      <div class="page-head"><div><div class="crumb">落地配 / <span id="placeholderCrumb"></span></div><h1 id="placeholderTitle"></h1></div></div>
+      <div class="placeholder"><div><span class="placeholder-icon">✓</span><h2 id="placeholderCopy"></h2><p>本次离线原型聚焦新增的“财务中心”和“订单预警”，原有模块结构保持不变。</p></div></div>
+    </section>
+  </main>
+
+  <div class="mask" id="mask" onclick="closeAll()"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head"><h2>订单费用详情</h2><button class="close" onclick="closeAll()">×</button></div>
+    <div class="drawer-body">
+      <div class="order-summary"><div class="kv"><span>订单号</span><b id="drawerId">—</b></div><div class="kv"><span>订单状态</span><b id="drawerStatus">—</b></div><div class="kv"><span>收件地区</span><b id="drawerDestination">—</b></div><div class="kv"><span>预警类型</span><b id="drawerLevel">—</b></div></div>
+      <div class="section-title"><span>成本与收入</span><button class="btn link" id="editFeeBtn" onclick="toggleFeeEdit()">修改费用</button></div>
+      <div class="fee-list">
+        <div class="fee-row"><span>调度费</span><b class="fee-view" id="vDispatch">¥0.00</b><input class="fee-edit hidden" id="eDispatch" type="number"><span style="text-align:right;color:#9aa2ae">后台维护</span></div>
+        <div class="fee-row"><span>干线费</span><b class="fee-view" id="vTrunk">¥0.00</b><input class="fee-edit hidden" id="eTrunk" type="number"><span style="text-align:right;color:#9aa2ae">按吨/方计费</span></div>
+        <div class="fee-row"><span>支线费</span><b class="fee-view" id="vBranch">¥0.00</b><input class="fee-edit hidden" id="eBranch" type="number"><span style="text-align:right;color:#9aa2ae">按吨/方计费</span></div>
+        <div class="fee-row"><span>提货费</span><b class="fee-view" id="vPickup">¥0.00</b><input class="fee-edit hidden" id="ePickup" type="number"><span style="text-align:right;color:#9aa2ae">后台维护</span></div>
+        <div class="fee-row"><span>末端费</span><b class="fee-view" id="vLastMile">¥0.00</b><input class="fee-edit hidden" id="eLastMile" type="number"><span style="text-align:right;color:#9aa2ae">按派送方式</span></div>
+        <div class="fee-row"><span>订单收入</span><b class="fee-view income-text" id="vIncome">¥0.00</b><input class="fee-edit hidden" id="eIncome" type="number"><span style="text-align:right;color:#9aa2ae">价格表/人工</span></div>
+      </div>
+      <div class="fee-total"><div><span>总成本</span><b id="drawerCost">¥0.00</b></div><div><span>成本占比</span><b id="drawerRatio">—</b></div><div class="important"><span>预计毛利</span><b id="drawerProfit">¥0.00</b></div></div>
+      <div class="section-title"><span>预警记录</span></div>
+      <div class="timeline"><div class="timeline-item"><b>系统触发订单预警</b><span id="timelineReason">成本超过收入90%</span><small id="timelineTime">2026-07-28 14:26</small></div><div class="timeline-item"><b>待客服处理</b><span>可核对费用、收入或价格表配置</span><small>当前节点</small></div></div>
+    </div>
+    <div class="drawer-foot"><button class="btn" onclick="closeAll()">关闭</button><button class="btn primary" id="saveFeeBtn" onclick="saveFee()" style="display:none">保存并重算</button><button class="btn primary" id="drawerHandleBtn" onclick="openHandleFromDrawer()">处理预警</button></div>
+  </aside>
+
+  <div class="modal" id="handleModal">
+    <div class="modal-head"><h2>处理订单预警</h2><button class="close" onclick="closeAll()">×</button></div>
+    <div class="modal-body"><div class="field"><label>订单号</label><input class="input" id="handleOrderId" style="width:100%" readonly></div><div class="field"><label>处理结果 <span style="color:#e24b58">*</span></label><textarea id="handleNote" placeholder="请填写费用核对、收入调整或其他处理说明"></textarea></div><div class="notice">提交后订单标记为“已处理”。后续成本或收入发生变化时，系统仍会实时重新计算；成本占比降至90%及以下则自动解除当前预警，并保留历史记录。</div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeAll()">取消</button><button class="btn primary" onclick="submitHandle()">确认处理</button></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const dailyData=[
+      ["07-01",1.98,1.45],["07-04",2.21,1.64],["07-07",2.06,1.51],["07-10",2.48,1.82],
+      ["07-13",2.37,1.73],["07-16",2.74,1.98],["07-19",2.59,1.92],["07-22",2.88,2.07],
+      ["07-25",3.14,2.33],["07-28",3.02,2.21]
+    ];
+    const monthlyData=[["1月",49.2,36.8],["2月",51.8,38.7],["3月",55.1,41.2],["4月",58.6,43.5],["5月",61.4,45.8],["6月",65.7,48.9],["7月",68.5,51.2]];
+    const orders={
+      "DEMO202607280018":{status:"支线运输中",destination:"喀什市",level:"高风险",dispatch:18,trunk:186,branch:172,pickup:12,last:115.8,income:530,time:"07-28 14:26"},
+      "DEMO202607280012":{status:"待派送",destination:"伊宁市",level:"亏损",dispatch:20,trunk:154,branch:138,pickup:16,last:100.6,income:418,time:"07-28 13:42"},
+      "DEMO202607270086":{status:"干线运输中",destination:"阿克苏市",level:"收入未设置",dispatch:0,trunk:132,branch:0,pickup:0,last:44,income:0,time:"07-28 11:18"},
+      "DEMO202607270073":{status:"已签收",destination:"昌吉市",level:"高风险",dispatch:0,trunk:96,branch:48,pickup:6,last:10,income:174,time:"07-28 10:43"},
+      "DEMO202607260152":{status:"已到自提点",destination:"乌鲁木齐市",level:"高风险",dispatch:0,trunk:104,branch:0,pickup:8,last:10,income:133,time:"07-28 09:36"},
+      "DEMO202607280016":{status:"已签收",destination:"乌鲁木齐市",level:"正常",dispatch:0,trunk:92,branch:0,pickup:8,last:10,income:186,time:"07-28 10:20"},
+      "DEMO202607280011":{status:"已签收",destination:"伊宁市",level:"正常",dispatch:15,trunk:118,branch:74,pickup:10,last:35.2,income:348,time:"07-28 09:45"}
+    };
+    let currentOrderId="",editingFee=false;
+    function money(v){return "¥"+Number(v||0).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2})}
+    function total(o){return Number(o.dispatch)+Number(o.trunk)+Number(o.branch)+Number(o.pickup)+Number(o.last)}
+    function drawChart(mode){
+      const data=mode==="monthly"?monthlyData:dailyData,max=Math.max(...data.flatMap(d=>[d[1],d[2]]));
+      const bars=document.getElementById("chartBars");bars.innerHTML="";
+      data.forEach(d=>{const g=document.createElement("div");g.className="bar-group";g.innerHTML=`<i class="bar income" style="height:${d[1]/max*92}%" title="${d[0]}收入 ${d[1]}万元"></i><i class="bar cost" style="height:${d[2]/max*92}%" title="${d[0]}成本 ${d[2]}万元"></i><label>${d[0]}</label>`;bars.appendChild(g)});
+      document.getElementById("chartSubtitle").textContent=mode==="monthly"?"2026年 · 按签收月":"2026年7月 · 按签收日";
+      document.querySelector(".y-axis").innerHTML=mode==="monthly"?"<span>70万</span><span>52.5万</span><span>35万</span><span>17.5万</span><span>0</span>":"<span>4万</span><span>3万</span><span>2万</span><span>1万</span><span>0</span>";
+    }
+    function goPage(id,title){
+      document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      document.querySelectorAll(".nav-item,.children button").forEach(n=>n.classList.remove("active"));
+      const child=document.querySelector(`[data-page="${id}"]`);
+      if(child){child.classList.add("active");if(id.startsWith("finance"))document.getElementById("financeNav").classList.add("active")}
+      if(id==="placeholder"){document.getElementById("placeholderTitle").textContent=title;document.getElementById("placeholderCrumb").textContent=title;document.getElementById("placeholderCopy").textContent=title+"沿用现有原型"}
+      window.scrollTo(0,0);
+    }
+    document.querySelectorAll("[data-page]").forEach(n=>n.addEventListener("click",()=>goPage(n.dataset.page,n.dataset.title)));
+    document.getElementById("financeNav").addEventListener("click",()=>document.getElementById("financeChildren").classList.toggle("hidden"));
+    document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");drawChart(b.dataset.mode);if(b.dataset.mode==="monthly"){document.getElementById("metricOrders").innerHTML="8,946<small>单</small>";document.getElementById("metricIncome").textContent="¥ 4,098,000";document.getElementById("metricCost").textContent="¥ 3,061,000";document.getElementById("metricProfit").textContent="¥ 1,037,000";document.getElementById("metricMargin").textContent="25.31%"}else{document.getElementById("metricOrders").innerHTML="1,268<small>单</small>";document.getElementById("metricIncome").textContent="¥ 685,000";document.getElementById("metricCost").textContent="¥ 512,340";document.getElementById("metricProfit").textContent="¥ 172,660";document.getElementById("metricMargin").textContent="25.21%"}}));
+    function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t.timer);t.timer=setTimeout(()=>t.classList.remove("show"),1800)}
+    function exportData(){toast("导出任务已创建，报表正在生成")}
+    function filterFinance(){const q=document.getElementById("financeSearch").value.trim().toLowerCase();let n=0;document.querySelectorAll("#financeBody tr").forEach(r=>{const show=!q||r.dataset.id.toLowerCase().includes(q);r.style.display=show?"":"none";if(show)n++});toast("已查询到 "+n+" 条演示数据")}
+    function resetFinance(){document.getElementById("financeSearch").value="";filterFinance()}
+    document.querySelectorAll(".alert-card").forEach(c=>c.addEventListener("click",()=>{document.querySelectorAll(".alert-card").forEach(x=>x.classList.remove("active"));c.classList.add("active");document.getElementById("alertLevel").value=c.dataset.alert;filterAlerts()}));
+    function filterAlerts(){const level=document.getElementById("alertLevel").value,status=document.getElementById("alertStatus").value,q=document.getElementById("alertSearch").value.trim().toLowerCase();let n=0;document.querySelectorAll("#alertBody tr").forEach(r=>{const show=(level==="全部预警"||r.dataset.level===level)&&(status==="全部状态"||r.dataset.status===status)&&(!q||r.dataset.id.toLowerCase().includes(q)||r.dataset.destination.includes(q));r.style.display=show?"":"none";if(show)n++});document.getElementById("alertResultCount").textContent=n}
+    function resetAlerts(){document.getElementById("alertLevel").value="全部预警";document.getElementById("alertStatus").value="全部状态";document.getElementById("alertSearch").value="";document.querySelectorAll(".alert-card").forEach((x,i)=>x.classList.toggle("active",i===0));filterAlerts()}
+    function showOverlay(){document.getElementById("mask").classList.add("show")}
+    function openDrawer(id){currentOrderId=id;const o=orders[id];if(!o)return;document.getElementById("drawerId").textContent=id;document.getElementById("drawerStatus").textContent=o.status;document.getElementById("drawerDestination").textContent=o.destination;document.getElementById("drawerLevel").innerHTML=`<span class="tag ${o.level==="亏损"?"red":o.level==="收入未设置"?"gray":o.level==="正常"?"green":"amber"}">${o.level}</span>`;fillFee(o);document.getElementById("timelineReason").textContent=o.level==="亏损"?"总成本已超过订单收入":o.level==="收入未设置"?"订单已有成本，但收入为0":"成本超过收入90%";document.getElementById("timelineTime").textContent="2026-"+o.time.replace(" "," ");document.getElementById("drawerHandleBtn").style.display=o.level==="正常"?"none":"";editingFee=false;setFeeEdit(false);showOverlay();document.getElementById("drawer").classList.add("show")}
+    function openFinanceDrawer(id){openDrawer(id)}
+    function fillFee(o){const map={Dispatch:o.dispatch,Trunk:o.trunk,Branch:o.branch,Pickup:o.pickup,LastMile:o.last,Income:o.income};Object.entries(map).forEach(([k,v])=>{document.getElementById("v"+k).textContent=money(v);document.getElementById("e"+k).value=v});const cost=total(o),ratio=o.income?cost/o.income*100:null,profit=o.income-cost;document.getElementById("drawerCost").textContent=money(cost);document.getElementById("drawerRatio").textContent=ratio===null?"—":ratio.toFixed(2)+"%";document.getElementById("drawerProfit").textContent=(profit<0?"-":"")+money(Math.abs(profit));document.getElementById("drawerProfit").style.color=profit<0?"#e24b58":"#16a36f"}
+    function toggleFeeEdit(){editingFee=!editingFee;setFeeEdit(editingFee)}
+    function setFeeEdit(on){document.querySelectorAll(".fee-view").forEach(x=>x.classList.toggle("hidden",on));document.querySelectorAll(".fee-edit").forEach(x=>x.classList.toggle("hidden",!on));document.getElementById("saveFeeBtn").style.display=on?"":"none";document.getElementById("editFeeBtn").textContent=on?"取消修改":"修改费用"}
+    function saveFee(){const o=orders[currentOrderId];o.dispatch=+document.getElementById("eDispatch").value;o.trunk=+document.getElementById("eTrunk").value;o.branch=+document.getElementById("eBranch").value;o.pickup=+document.getElementById("ePickup").value;o.last=+document.getElementById("eLastMile").value;o.income=+document.getElementById("eIncome").value;const c=total(o);o.level=o.income===0&&c>0?"收入未设置":c>=o.income?"亏损":c>o.income*.9?"高风险":"正常";editingFee=false;setFeeEdit(false);fillFee(o);document.getElementById("drawerLevel").innerHTML=`<span class="tag ${o.level==="亏损"?"red":o.level==="收入未设置"?"gray":o.level==="正常"?"green":"amber"}">${o.level}</span>`;toast(o.level==="正常"?"费用已保存，当前预警自动解除":"费用已保存，预警结果已重新计算")}
+    function openHandle(id){currentOrderId=id;document.getElementById("handleOrderId").value=id;document.getElementById("handleNote").value="";document.getElementById("drawer").classList.remove("show");showOverlay();document.getElementById("handleModal").classList.add("show")}
+    function openHandleFromDrawer(){openHandle(currentOrderId)}
+    function submitHandle(){const note=document.getElementById("handleNote").value.trim();if(!note){toast("请填写处理说明");return}const row=document.querySelector(`#alertBody tr[data-id="${currentOrderId}"]`);if(row){row.dataset.status="已处理";const cells=row.querySelectorAll("td");cells[9].innerHTML='<span class="status-dot done"></span>已处理';const detail=document.createElement("button");detail.className="btn link";detail.textContent="详情";detail.onclick=()=>openDrawer(currentOrderId);const done=document.createElement("button");done.className="btn link";done.textContent="已处理";done.disabled=true;cells[10].replaceChildren(detail,done)}updateAlertCounts();closeAll();toast("预警已处理，历史记录已保留")}
+    function updateAlertCounts(){const pending=[...document.querySelectorAll("#alertBody tr")].filter(r=>r.dataset.status==="待处理").length;document.getElementById("sideAlertCount").textContent=pending;document.getElementById("topAlertCount").textContent=pending}
+    function closeAll(){document.getElementById("mask").classList.remove("show");document.getElementById("drawer").classList.remove("show");document.getElementById("handleModal").classList.remove("show");editingFee=false;setFeeEdit(false)}
+    document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAll()});
+    drawChart("daily");
+  </script>
+</body>
+</html>
